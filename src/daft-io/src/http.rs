@@ -1,7 +1,6 @@
 use std::{
     any::Any,
     num::ParseIntError,
-    ops::Range,
     string::FromUtf8Error,
     sync::{Arc, LazyLock},
     time::Duration,
@@ -22,6 +21,7 @@ use url::Position;
 use super::object_io::{GetResult, ObjectSource};
 use crate::{
     object_io::{FileMetadata, FileType, LSResult},
+    range::GetRange,
     stats::IOStatsRef,
     stream_utils::io_stats_on_bytestream,
     FileFormat,
@@ -228,16 +228,13 @@ impl ObjectSource for HttpSource {
     async fn get(
         &self,
         uri: &str,
-        range: Option<Range<usize>>,
+        range: Option<GetRange>,
         io_stats: Option<IOStatsRef>,
     ) -> super::Result<GetResult> {
         let request = self.client.get(uri);
         let request = match range {
             None => request,
-            Some(range) => request.header(
-                RANGE,
-                format!("bytes={}-{}", range.start, range.end.saturating_sub(1)),
-            ),
+            Some(range) => request.header(RANGE, range.to_string()),
         };
 
         let response = request
@@ -390,7 +387,6 @@ impl ObjectSource for HttpSource {
 
 #[cfg(test)]
 mod tests {
-
     use std::default;
 
     use crate::{object_io::ObjectSource, HttpSource, Result};
@@ -408,7 +404,7 @@ mod tests {
         assert_eq!(checksum, parquet_expected_md5);
 
         let first_bytes = client
-            .get(parquet_file_path, Some(0..10), None)
+            .get(parquet_file_path, Some((0..10).into()), None)
             .await?
             .bytes()
             .await?;
@@ -416,7 +412,7 @@ mod tests {
         assert_eq!(first_bytes.as_ref(), &all_bytes[..10]);
 
         let first_bytes = client
-            .get(parquet_file_path, Some(10..100), None)
+            .get(parquet_file_path, Some((10..100).into()), None)
             .await?
             .bytes()
             .await?;
@@ -426,7 +422,7 @@ mod tests {
         let last_bytes = client
             .get(
                 parquet_file_path,
-                Some((all_bytes.len() - 10)..(all_bytes.len() + 10)),
+                Some(((all_bytes.len() - 10)..(all_bytes.len() + 10)).into()),
                 None,
             )
             .await?

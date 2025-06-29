@@ -15,10 +15,11 @@ use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
 use super::{
     object_io::{GetResult, ObjectSource},
-    Result,
+    InvalidRangeRequestSnafu, Result,
 };
 use crate::{
     object_io::{self, FileMetadata, LSResult},
+    range::GetRange,
     stats::IOStatsRef,
     FileFormat,
 };
@@ -142,13 +143,18 @@ impl ObjectSource for LocalSource {
     async fn get(
         &self,
         uri: &str,
-        range: Option<Range<usize>>,
+        range: Option<GetRange>,
         _io_stats: Option<IOStatsRef>,
     ) -> super::Result<GetResult> {
         const LOCAL_PROTOCOL: &str = "file://";
-        if let Some(uri) = uri.strip_prefix(LOCAL_PROTOCOL) {
+        if let Some(file) = uri.strip_prefix(LOCAL_PROTOCOL) {
+            let len = self.get_size(uri, None).await?;
+            let range = range
+                .map(|r| r.as_range(len))
+                .transpose()
+                .context(InvalidRangeRequestSnafu)?;
             Ok(GetResult::File(LocalFile {
-                path: uri.into(),
+                path: file.into(),
                 range,
             }))
         } else {
@@ -423,7 +429,7 @@ mod tests {
         assert_eq!(try_all_bytes, bytes);
 
         let first_bytes = client
-            .get(&parquet_file_path, Some(0..10), None)
+            .get(&parquet_file_path, Some((0..10).into()), None)
             .await?
             .bytes()
             .await?;
@@ -431,7 +437,7 @@ mod tests {
         assert_eq!(first_bytes.as_ref(), &bytes[..10]);
 
         let first_bytes = client
-            .get(&parquet_file_path, Some(10..100), None)
+            .get(&parquet_file_path, Some((10..100).into()), None)
             .await?
             .bytes()
             .await?;
@@ -441,7 +447,7 @@ mod tests {
         let last_bytes = client
             .get(
                 &parquet_file_path,
-                Some((bytes.len() - 10)..(bytes.len() + 10)),
+                Some(((bytes.len() - 10)..(bytes.len() + 10)).into()),
                 None,
             )
             .await?
