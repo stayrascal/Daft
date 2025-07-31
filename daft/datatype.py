@@ -4,7 +4,7 @@ import threading
 from typing import TYPE_CHECKING, Any, Callable, Union
 
 from daft.context import get_context
-from daft.daft import ImageMode, PyDataType, PyTimeUnit
+from daft.daft import ImageMode, PyDataType, PyTimeUnit, VideoMode
 from daft.dependencies import np, pa, pil_image
 
 if TYPE_CHECKING:
@@ -392,6 +392,52 @@ class DataType:
                 f"Image height and width must either both be specified, or both not be specified, but got height={height}, width={width}"
             )
         return cls._from_pydatatype(PyDataType.image(mode, height, width))
+
+    @classmethod
+    def video(
+        cls,
+        mode: str | VideoMode | None = None,
+        fps: float | None = None,
+        frames: int | None = None,
+        height: int | None = None,
+        width: int | None = None,
+        duration: float | None = None,
+    ) -> DataType:
+        """Create a Video DataType: video arrays contain (frames, height, width, channel) ndarrays of pixel values.
+
+        Each video in the array has an :class:`~daft.VideoMode`, which describes the pixel dtype (e.g. uint8) and
+        the number of video channels/bands and their logical interpretation (e.g. RGB).
+
+        Args:
+            mode: The mode of the video. By default, this is inferred from the underlying data.
+                If frames, height and width are specified, the mode must also be specified.
+            fps: The fps of the video. By default, this is inferred from the underlying data.
+            frames: The number of frames in the video. By default, this is inferred from the underlying data.
+                Must be specified if the height and width are specified.
+            height: The height of the video. By default, this is inferred from the underlying data.
+                Must be specified if the width is specified.
+            width: The width of the video. By default, this is inferred from the underlying data.
+                Must be specified if the height is specified.
+            duration: The duration of the video. By default, this is inferred from the underlying data.
+        """
+        if isinstance(mode, str):
+            mode = VideoMode.from_mode_string(mode.upper())
+
+        if mode is not None and not isinstance(mode, VideoMode):
+            raise ValueError(f"mode must be a string or VideoMode variant, but got: {mode}")
+
+        if frames is not None and height is not None and width is not None:
+            if not isinstance(frames, int) or frames <= 0:
+                raise ValueError("Video frames must be a positive integer, but got: ", frames)
+            if not isinstance(height, int) or height <= 0:
+                raise ValueError("Video height must be a positive integer, but got: ", height)
+            if not isinstance(width, int) or width <= 0:
+                raise ValueError("Video width must be a positive integer, but got: ", width)
+        elif frames is not None or height is not None or width is not None:
+            raise ValueError(
+                f"Video frames, height and width must either all be specified, or all not be specified, but got frames={frames}, height={height}, width={width}"
+            )
+        return cls._from_pydatatype(PyDataType.video(mode, fps, frames, height, width, duration))
 
     @classmethod
     def tensor(

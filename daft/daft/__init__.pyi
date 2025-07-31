@@ -76,6 +76,48 @@ class ImageMode(Enum):
         """
         ...
 
+class VideoMode(Enum):
+    """Supported video modes for Daft's video type."""
+
+    #: 8-bit grayscale
+    L = 1
+
+    #: 8-bit RGB
+    RGB = 2
+
+    #: 8-bit RGB + alpha
+    RGBA = 3
+
+    #: 8-bit YUV444
+    YUV = 4
+
+    #: 16-bit grayscale
+    LA16 = 5
+
+    #: 16-bit RGB
+    RGB16 = 6
+
+    #: 16-bit RGB + alpha
+    RGBA16 = 7
+
+    #: 16-bit YUV
+    YUV16 = 8
+
+    #: 32-bit floating RGB
+    RGB32F = 9
+
+    #: 32-bit floating RGB + alpha
+    RGBA32F = 10
+
+    @staticmethod
+    def from_mode_string(mode: str) -> VideoMode:
+        """Create a VideoMode from its string representation.
+
+        Args:
+            mode: String representation of the mode.
+        """
+        ...
+
 class PyWindowBoundary:
     """Represents a window frame boundary in window functions."""
 
@@ -1043,6 +1085,15 @@ class PyDataType:
         mode: ImageMode | None = None,
         height: int | None = None,
         width: int | None = None,
+    ) -> PyDataType: ...
+    @staticmethod
+    def video(
+        mode: VideoMode | None = None,
+        fps: float | None = None,
+        frames: int | None = None,
+        height: int | None = None,
+        width: int | None = None,
+        duration: float | None = None,
     ) -> PyDataType: ...
     @staticmethod
     def tensor(dtype: PyDataType, shape: tuple[int, ...] | None = None) -> PyDataType: ...
