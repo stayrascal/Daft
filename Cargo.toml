@@ -52,6 +52,7 @@ daft-session = {path = "src/daft-session", default-features = false}
 daft-shuffles = {path = "src/daft-shuffles", default-features = false}
 daft-sql = {path = "src/daft-sql", default-features = false}
 daft-stats = {path = "src/daft-stats", default-features = false}
+daft-video = {path = "src/daft-video", default-features = false}
 daft-warc = {path = "src/daft-warc", default-features = false}
 daft-writers = {path = "src/daft-writers", default-features = false}
 log = {workspace = true}
@@ -206,6 +207,7 @@ members = [
   "src/daft-sketch",
   "src/daft-sql",
   "src/daft-recordbatch",
+  "src/daft-video",
   "src/daft-warc",
   "src/daft-writers",
   "src/hyperloglog",
